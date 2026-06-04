@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Intelligence Platform</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #121a2e;
+            --panel-soft: #17213a;
+            --text: #edf2ff;
+            --muted: #9aa7bf;
+            --border: #25314d;
+            --primary: #6d8dff;
+            --primary-strong: #8ea4ff;
+            --success: #37d99e;
+            --warning: #f7c948;
+            --danger: #ff6b7a;
+            --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, rgba(109, 141, 255, 0.18), transparent 32%), var(--bg);
+            color: var(--text);
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+        }
+
+        main { max-width: 1120px; margin: 0 auto; padding: 34px 16px 48px; }
+
+        header { margin-bottom: 24px; }
+        h1 { margin: 0 0 10px; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.05; }
+        p { color: var(--muted); line-height: 1.6; }
+
+        .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 430px); gap: 18px; align-items: start; }
+        .card { background: rgba(18, 26, 46, 0.95); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 20px; }
+        .stack { display: grid; gap: 16px; }
+
+        label { display: block; margin-bottom: 8px; font-weight: 700; }
+        input, textarea { width: 100%; border: 1px solid var(--border); border-radius: 12px; background: #0f1729; color: var(--text); font: inherit; padding: 13px 14px; outline: none; }
+        textarea { min-height: 200px; resize: vertical; line-height: 1.5; }
+        input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(109, 141, 255, 0.15); }
+
+        button { border: 0; border-radius: 12px; padding: 13px 18px; background: linear-gradient(135deg, var(--primary), var(--primary-strong)); color: #071022; font: inherit; font-weight: 800; cursor: pointer; }
+        button:disabled { opacity: 0.7; cursor: wait; }
+
+        .status { min-height: 22px; margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+
+        .result-card { display: grid; gap: 16px; }
+        .candidate-card { display: grid; gap: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--panel-soft); padding: 16px; position: relative; }
+        .candidate-card.top { border-color: var(--success); box-shadow: 0 0 10px rgba(55, 217, 158, 0.2); }
+
+        .candidate-head { display: flex; justify-content: space-between; gap: 14px; align-items: start; }
+        .rank { color: var(--primary-strong); font-weight: 900; }
+        .score { font-size: 2.4rem; font-weight: 900; }
+
+        .score-success { color: var(--success); }
+        .score-warning { color: var(--warning); }
+        .score-danger { color: var(--danger); }
+
+        .badge { display: inline-flex; border-radius: 999px; padding: 4px 11px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+        .badge-exp { background: rgba(109, 141, 255, 0.15); color: var(--primary-strong); border: 1px solid rgba(109, 141, 255, 0.3); }
+        
+        .chip { display: inline-flex; margin: 4px 4px 0 0; border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; font-weight: 600; }
+        .chip-match { background: rgba(55, 217, 158, 0.15); color: var(--success); border: 1px solid rgba(55, 217, 158, 0.3); }
+        .chip-missing { background: rgba(255, 107, 122, 0.15); color: var(--danger); border: 1px solid rgba(255, 107, 122, 0.3); }
+
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+        .mini-metric { border: 1px solid var(--border); border-radius: 10px; background: #101a30; padding: 10px; text-align: center; }
+        .mini-metric span { display: block; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; margin-bottom: 2px; }
+        .mini-metric strong { font-size: 1.1rem; color: var(--text); }
+
+        .section-title { margin: 15px 0 5px; font-size: 0.8rem; text-transform: uppercase; color: var(--muted); font-weight: 700; letter-spacing: 0.05em; }
+        .job-card { display: flex; justify-content: space-between; padding: 12px; background: var(--panel-soft); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
+        .empty { border: 1px dashed var(--border); border-radius: 12px; padding: 20px; color: var(--muted); text-align: center; }
+        
+        ul { margin: 5px 0; padding-left: 18px; color: var(--muted); font-size: 0.9rem; }
+        li { margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>AI Resume Intelligence</h1>
+            <p>Advanced semantic matching, skill gap analysis, and career trajectory prediction.</p>
+        </header>
+
+        <section class="layout">
+            <div class="stack">
+                <div class="card">
+                    <label>Upload Dataset & Resumes</label>
+                    <div class="actions">
+                        <input id="csvFile" type="file" accept=".csv" style="display:none">
+                        <button onclick="document.getElementById('csvFile').click()">Select CSV</button>
+                        <input id="resumeFile" type="file" accept=".pdf" multiple style="display:none">
+                        <button onclick="document.getElementById('resumeFile').click()">Select PDFs</button>
+                    </div>
+                    <div class="actions">
+                        <button id="uploadCsvButton">Load Dataset</button>
+                        <button id="uploadButton">Extract Resumes</button>
+                    </div>
+                    <div id="uploadStatus" class="status"></div>
+                </div>
+
+                <div class="card">
+                    <label>Intelligence Input</label>
+                    <textarea id="resumeText" placeholder="Extracted resume text..."></textarea>
+                    <textarea id="jobDescription" style="min-height:120px; margin-top:10px;" placeholder="Target job description..."></textarea>
+                    <div class="actions">
+                        <button id="analyzeButton">Analyze Match</button>
+                        <button id="recommendButton">Recommend Jobs</button>
+                        <button id="rankButton">Rank Against Dataset</button>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="stack">
+                <div class="card">
+                    <h2>Intelligence Report</h2>
+                    <div id="result">
+                        <div class="empty">Enter data and run analysis to see the report.</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Recommendations</h2>
+                    <div id="recommendations">
+                        <div class="empty">Recommendations will appear here.</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Dataset Ranking</h2>
+                    <div id="rankResults">
+                        <div class="empty">Ranked dataset resumes will appear here.</div>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script>
+        const resumeFile = document.getElementById("resumeFile");
+        const resumeText = document.getElementById("resumeText");
+        const jobDescription = document.getElementById("jobDescription");
+        const uploadButton = document.getElementById("uploadButton");
+        const analyzeButton = document.getElementById("analyzeButton");
+        const recommendButton = document.getElementById("recommendButton");
+        const csvFile = document.getElementById("csvFile");
+        const uploadCsvButton = document.getElementById("uploadCsvButton");
+        const rankButton = document.getElementById("rankButton");
+        const result = document.getElementById("result");
+        const recommendations = document.getElementById("recommendations");
+        const uploadStatus = document.getElementById("uploadStatus");
+
+        let uploadedResumes = [];
+
+        function apiUrl(path) {
+            return (window.location.protocol === "file:") ? `http://127.0.0.1:5000${path}` : path;
+        }
+
+        function getScoreColor(score) {
+            if (score >= 80) return "score-success";
+            if (score >= 60) return "score-warning";
+            return "score-danger";
+        }
+
+        function renderReport(data) {
+            if (!data || data.error) {
+                result.innerHTML = `<div class="empty">${data.error || "Error generating report"}</div>`;
+                return;
+            }
+
+            result.innerHTML = `
+                <div class="candidate-card top">
+                    <div class="candidate-head">
+                        <div>
+                            <span class="badge badge-exp">${data.experience_level}</span>
+                            <h3 style="margin:10px 0 5px;">Analysis Summary</h3>
+                        </div>
+                        <div class="score ${getScoreColor(data.final_score)}">${data.final_score}%</div>
+                    </div>
+                    
+                    <div class="metric-grid">
+                        <div class="mini-metric"><span>Semantic</span><strong>${data.semantic_score}%</strong></div>
+                        <div class="mini-metric"><span>Skills</span><strong>${data.skill_score}%</strong></div>
+                        <div class="mini-metric"><span>Quality</span><strong>${data.resume_quality}%</strong></div>
+                    </div>
+
+                    <div class="section-title">Matched Skills</div>
+                    <div>${data.matched_skills.map(s => `<span class="chip chip-match">${s}</span>`).join("") || "None"}</div>
+
+                    <div class="section-title">Missing Skills</div>
+                    <div>${data.missing_skills.map(s => `<span class="chip chip-missing">${s}</span>`).join("") || "None"}</div>
+
+                    <div class="section-title">Career Paths</div>
+                    <div>${data.career_paths.map(p => `<span class="badge badge-exp" style="margin:2px;">${p}</span>`).join("") || "None"}</div>
+
+                    <div class="section-title">Intelligence Feedback</div>
+                    <ul>${data.feedback.map(f => `<li>${f}</li>`).join("")}</ul>
+                </div>
+            `;
+        }
+
+        uploadButton.addEventListener("click", async () => {
+            if (!resumeFile.files.length) return;
+            const fd = new FormData();
+            Array.from(resumeFile.files).forEach(f => fd.append("resumes", f));
+            uploadStatus.textContent = "Processing...";
+            try {
+                const res = await fetch(apiUrl("/upload_resume"), { method: "POST", body: fd });
+                const data = await res.json();
+                uploadedResumes = data.resumes || [];
+                resumeText.value = uploadedResumes.map(r => r.resume_text).join("\n\n---\n\n");
+                uploadStatus.textContent = `Extracted ${uploadedResumes.length} resumes.`;
+            } catch (e) { uploadStatus.textContent = "Error uploading."; }
+        });
+
+        analyzeButton.addEventListener("click", async () => {
+            const rt = resumeText.value.trim();
+            const jd = jobDescription.value.trim();
+            if (!rt || !jd) return;
+            result.innerHTML = "<div class='empty'>Running AI Match...</div>";
+            try {
+                const res = await fetch(apiUrl("/match"), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ resumes: [rt], job_description: jd })
+                });
+                const data = await res.json();
+                renderReport(data[0]);
+            } catch (e) { result.innerHTML = "<div class='empty'>Failed to analyze.</div>"; }
+        });
+
+        recommendButton.addEventListener("click", async () => {
+            const rt = resumeText.value.trim();
+            const jd = jobDescription.value.trim();
+            
+            if (!rt && !jd) {
+                recommendations.innerHTML = "<div class='empty'>Please extract or paste a resume first, or provide a job description.</div>";
+                return;
+            }
+
+            recommendations.innerHTML = "<div class='empty'>Generating personalized recommendations...</div>";
+            try {
+                const res = await fetch(apiUrl("/recommend_jobs"), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        resume_text: rt,
+                        job_description: jd
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.error) throw new Error(data.error);
+
+                let html = `<div class="section-title">Personalized Roles</div>`;
+                
+                if (data.recommendations && data.recommendations.length > 0) {
+                    data.recommendations.forEach(r => {
+                        html += `
+                            <div class="job-card">
+                                <span>${r.job}</span>
+                                <span class="${getScoreColor(r.score)}">${r.score}%</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += "<div class='empty'>No recommendations found.</div>";
+                }
+                
+                recommendations.innerHTML = html;
+            } catch (e) { 
+                recommendations.innerHTML = `<div class='empty'>Failed: ${e.message}</div>`; 
+            }
+        });
+
+        uploadCsvButton.addEventListener("click", async () => {
+            if (!csvFile.files.length) return;
+            const fd = new FormData();
+            fd.append("file", csvFile.files[0]);
+            try {
+                const res = await fetch(apiUrl("/upload_csv"), { method: "POST", body: fd });
+                const data = await res.json();
+                uploadStatus.textContent = `Dataset loaded: ${data.total} resumes.`;
+            } catch (e) { uploadStatus.textContent = "CSV Error."; }
+        });
+
+        rankButton.addEventListener("click", async () => {
+            const rt = resumeText.value.trim();
+            if (!rt) {
+                rankResults.innerHTML = "<div class='empty'>Dataset ranking requires resume text. Please extract or paste a resume first.</div>";
+                return;
+            }
+            rankResults.innerHTML = "<div class='empty'>Ranking dataset...</div>";
+            try {
+                const res = await fetch(apiUrl("/rank"), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ resume_text: rt })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                rankResults.innerHTML = `<div class="section-title">Similar Candidates</div>` + 
+                    data.map(r => `<div class="job-card"><strong>Resume #${r.resume_id}</strong><span>${r.score}%</span></div>`).join("");
+            } catch (e) { rankResults.innerHTML = `<div class='empty'>Ranking Failed: ${e.message}</div>`; }
+        });
+    </script>
+</body>
+</html>
